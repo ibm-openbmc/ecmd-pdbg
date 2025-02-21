@@ -5,21 +5,20 @@ Based on P10_IPL_Flow_v0.93.00 of IPL Flow document
 
 StepName                                  Num   Description
 -------------------------------------------------------------------------------------------------------------
-poweron                                   0     Power on system, enable soft switches
-startipl                                  0     Start IPL on FSP
-disableattns                              0     Disable Attentions
-updatehwmodel                             0     Update the HWServer Model
-alignment_check                           0     Check boot reqs for FSP
-set_ref_clock                             0     Set the Processor ref clock
-proc_clock_test                           0     Check reference clock validity
-proc_prep_ipl                             0     Clear all pending mbox messages; set all GP regs to default
-edramrepair                               0     Noop
-asset_protection                          0     Asset Protection
-proc_select_boot_prom                     0     Select the boot SEEPROM/OTPROM
-hb_config_update                          0     HB config update
-sbe_config_update                         0     Customize SEEPROM image via xip_customize; setup mbox
-sbe_start                                 0     Start primary SBE
-startprd                                  0     Build diagnostics model
+pre_cfam_reset                            0     Power on system, enable soft switches
+cfam_reset                                0     Start IPL on FSP
+poweron                                   0     Disable Attentions
+startipl                                  0     Update the HWServer Model
+disable_attns                             0     Check boot reqs for FSP
+updatehwmodel                             0     Set the Processor ref clock
+smp_topology                              0     Check reference clock validity
+boot_optimization_check                   0     Clear all pending mbox messages; set all GP regs to default
+set_ref_clock                             0     Noop
+clock_test                                0     Asset Protection
+hb_config_update                          0     Select the boot SEEPROM/OTPROM
+ph_sppe_config_update                     0     HB config update
+cbs_start                                 0     Customize SEEPROM image via xip_customize; setup mbox
+startPRD                                  0     Start primary SBE
 proc_attn_listen                          0     Enable attn interrupts for primary processor
 
 proc_sbe_enable_seeprom                   1     Select SEEPROM address
