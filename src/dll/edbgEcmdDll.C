@@ -39,6 +39,13 @@
 #include <unistd.h>
 #include <yaml.h>
 
+#include <hwaccess/hw_access_intf.H>
+#include <targeting/target_service.H>
+#include <targeting/predicates/predicateattrval.H>
+#include <targeting/target.H>
+#include <targeting/xmltohb/attributeenums.H>
+#include <targeting/xmltohb/attributetraits.H>
+
 // Headers from eCMD
 #include <ecmdChipTargetCompare.H>
 #include <ecmdDataBuffer.H>
@@ -1644,20 +1651,34 @@ uint32_t dllGetCfamRegister(const ecmdChipTarget &i_target, uint32_t i_address,
       break;
     }
   } else {
-    rc = fetchCfamTarget(i_target, &pdbgTarget);
-    if (rc)
-      return rc;
+     try
+    {
+        using namespace TARGETING;
+        PredicateAttrVal<ATTR_TYPE> pred(TYPE_PROC);
+        auto& ts = TargetService::instance();
+        ts.init("/tmp/targeting_test.dtb");
+        auto top = ts.getTopLevelTarget();
 
-    // Make sure the pdbg target probe has been done and get the target state
-    if (pdbg_target_probe(pdbgTarget) != PDBG_TARGET_ENABLED) {
-      return out.error(ECMD_TARGET_NOT_CONFIGURED, FUNCNAME,
-                       "Target not configured!\n");
+        for (auto&& target :
+                 ts.getAssociated(top, AssociationType::childByPhysical,
+                                  RecursionLevel::all, &pred))
+        {
+            if (i_target.pos == target->getAttr<ATTR_FAPI_POS>())
+            {
+                ts.setHwAccessMethod(target, HW_ACCESS_METHOD_DIRECT_ACCESS);
+                rc = hwaccess::HwAccessIntf::getCfamRegister(target, i_address, data);
+                break;
+            }
+        }
     }
-    rc = fsi_read(pdbgTarget, i_address, &data);
+    catch (std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << "\n";
+    }
   }
-  o_data.setBitLength(32);
-  o_data.setWord(0, data);
-  return rc;
+    o_data.setBitLength(32);
+    o_data.setWord(0, data);
+    return rc;
 }
 
 uint32_t dllPutCfamRegister(const ecmdChipTarget &i_target, uint32_t i_address,
@@ -1680,16 +1701,30 @@ uint32_t dllPutCfamRegister(const ecmdChipTarget &i_target, uint32_t i_address,
       break;
     }
   } else {
-    rc = fetchCfamTarget(i_target, &pdbgTarget);
-    if (rc)
-      return rc;
+     try
+    {
+        using namespace TARGETING;
+        PredicateAttrVal<ATTR_TYPE> pred(TYPE_PROC);
+        auto& ts = TargetService::instance();
+        ts.init("/tmp/targeting_test.dtb");
+        auto top = ts.getTopLevelTarget();
 
-    // Make sure the pdbg target probe has been done and get the target state
-    if (pdbg_target_probe(pdbgTarget) != PDBG_TARGET_ENABLED) {
-      return out.error(ECMD_TARGET_NOT_CONFIGURED, FUNCNAME,
-                       "Target not configured!\n");
+        for (auto&& target :
+                 ts.getAssociated(top, AssociationType::childByPhysical,
+                                  RecursionLevel::all, &pred))
+        {
+            if (i_target.pos == target->getAttr<ATTR_FAPI_POS>())
+            {
+                ts.setHwAccessMethod(target, HW_ACCESS_METHOD_DIRECT_ACCESS);
+                rc = hwaccess::HwAccessIntf::putCfamRegister(target, i_address, i_data.getWord(0));
+                break;
+            }
+        }
     }
-    rc = fsi_write(pdbgTarget, i_address, i_data.getWord(0));
+    catch (std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << "\n";
+    }
   }
   return rc;
 }
