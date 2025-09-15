@@ -22,6 +22,12 @@ if get_option('journal').enabled()
     libsystemd_pkg = dependency('libsystemd')
 endif
 
+dep_targeting = dependency('libtargeting', required: true)
+dep_hwaccess = dependency('libhwaccess', required: true)
+dep_targetsvc = dependency('libtargetsvc', required: true)
+dep_transport = dependency('libtransport', required: true)
+dep_fdt = dependency('libfdt-custom', required: true)
+
 libedbg = library(
             'edbg',
             'common/edbgCommon.C',
@@ -47,7 +53,9 @@ libedbg = library(
             '../ecmd/ecmd-core/dll/ecmdDllCapi.C',
             '../' + autogen_path + '/cipDllCapi.C',
             include_directories : headers,
-            dependencies : [libcpp,libfs, libyaml, libpdbg, libipl, libekb, get_option('journal').enabled() ? libsystemd_pkg :[]],
+            dependencies : [libcpp,libfs, libyaml, libpdbg, libipl, libekb,
+                            dep_targeting, dep_hwaccess, dep_targetsvc, dep_transport, dep_fdt,
+                            get_option('journal').enabled() ? libsystemd_pkg :[]],
             link_with : libecmd,
             version: meson.project_version(),
             install: true)
