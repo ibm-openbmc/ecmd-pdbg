@@ -39,6 +39,14 @@
 #include <unistd.h>
 #include <yaml.h>
 
+#include <hwaccess/hw_access_intf.H>
+#include <targeting/target_service.H>
+#include <targeting/predicates/predicateattrval.H>
+#include <targeting/predicates/predicatepostfixexpr.H>
+#include <targeting/target.H>
+#include <targeting/xmltohb/attributeenums.H>
+#include <targeting/xmltohb/attributetraits.H>
+
 // Headers from eCMD
 #include <ecmdChipTargetCompare.H>
 #include <ecmdDataBuffer.H>
@@ -296,6 +304,9 @@ static int initTargets(void) {
    *  PDBG_DTB, then it will override the default device tree or the specified
    *  device tree. NULL to use default which is used pdbg. */
   pdbg_targets_init(NULL);
+
+  /*TODO p12-refactor: fix device tree path*/
+  TARGETING::TargetService::instance().init("/tmp/targeting_test.dtb");
 
   return ECMD_SUCCESS;
 }
@@ -1620,6 +1631,35 @@ uint32_t dllDoScomMultiple(const ecmdChipTarget &i_target,
 #endif // ECMD_REMOVE_SCOM_FUNCTIONS
 
 #ifndef ECMD_REMOVE_FSI_FUNCTIONS
+TARGETING::TargetPtr getProcTargetByPos(uint32_t posValue)
+{
+    using namespace TARGETING;
+    auto& ts = TargetService::instance();
+    auto top = ts.getTopLevelTarget();
+
+    // Build predicate to match processor type and position
+    auto typeProc = std::make_shared<PredicateAttrVal<ATTR_TYPE>>(TYPE_PROC);
+    auto pos = std::make_shared<PredicateAttrVal<ATTR_FAPI_POS>>(posValue);
+
+    PredicatePostfixExpr procPred;
+    procPred.push(typeProc).push(pos).And();
+
+    // Find all matching processor targets
+    auto&& targets = ts.getAssociated(top, AssociationType::childByPhysical,
+                                    RecursionLevel::all, &procPred);
+
+    // Return the matching target (or nullptr)
+    if (targets.size() == 1)
+    {
+        return targets.front();
+    }
+    else
+    {
+        std::cerr << "processor target not found for FAPI_POS: " << posValue << "\n";
+        return nullptr;
+    }
+}
+
 /* ################################################################# */
 /* cfam Functions - cfam Functions - cfam Functions - cfam Functions */
 /* ################################################################# */
@@ -1643,17 +1683,21 @@ uint32_t dllGetCfamRegister(const ecmdChipTarget &i_target, uint32_t i_address,
       // Found the target and read the value, so we can break
       break;
     }
-  } else {
-    rc = fetchCfamTarget(i_target, &pdbgTarget);
-    if (rc)
-      return rc;
-
-    // Make sure the pdbg target probe has been done and get the target state
-    if (pdbg_target_probe(pdbgTarget) != PDBG_TARGET_ENABLED) {
-      return out.error(ECMD_TARGET_NOT_CONFIGURED, FUNCNAME,
-                       "Target not configured!\n");
+  }
+  else
+  {
+    try
+    {
+        auto target = getProcTargetByPos(i_target.pos);
+        if (target)
+        {
+            rc = hwaccess::HwAccessIntf::getCfamRegister(target, i_address, data);
+        }
     }
-    rc = fsi_read(pdbgTarget, i_address, &data);
+    catch (std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << "\n";
+    }
   }
   o_data.setBitLength(32);
   o_data.setWord(0, data);
@@ -1679,17 +1723,21 @@ uint32_t dllPutCfamRegister(const ecmdChipTarget &i_target, uint32_t i_address,
       // Found the target and read the value, so we can break
       break;
     }
-  } else {
-    rc = fetchCfamTarget(i_target, &pdbgTarget);
-    if (rc)
-      return rc;
-
-    // Make sure the pdbg target probe has been done and get the target state
-    if (pdbg_target_probe(pdbgTarget) != PDBG_TARGET_ENABLED) {
-      return out.error(ECMD_TARGET_NOT_CONFIGURED, FUNCNAME,
-                       "Target not configured!\n");
+  }
+  else
+  {
+    try
+    {
+        auto target = getProcTargetByPos(i_target.pos);
+        if (target)
+        {
+            rc = hwaccess::HwAccessIntf::putCfamRegister(target, i_address, i_data.getWord(0));
+        }
     }
-    rc = fsi_write(pdbgTarget, i_address, i_data.getWord(0));
+    catch (std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << "\n";
+    }
   }
   return rc;
 }
