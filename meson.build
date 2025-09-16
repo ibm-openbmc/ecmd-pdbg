@@ -2,7 +2,7 @@ project(
     'ecmd-pdbg',
     ['cpp','c'],
     default_options: [
-        'cpp_std=c++17',
+        'cpp_std=c++20',
         'default_library=shared',
     ],
     meson_version : '>= 0.51',
