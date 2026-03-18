@@ -634,7 +634,6 @@ int edbgIPLTable::istepPowerOn()
 {
     std::string host_reboot_off_cmd = "obmcutil hostrebootoff";
     std::string chasis_on_cmd = "obmcutil --wait chassison";
-    std::string mbox_reset_cmd = "/usr/sbin/mboxctl --reset";
     bool chassisOn = false;
     uint16_t count = 0;
     constexpr auto GENESIS_BOOT_FILE = "/var/lib/phal/genesisboot";
@@ -675,18 +674,7 @@ int edbgIPLTable::istepPowerOn()
         }while(++count < 180);
 
     }
-    /* Check chassis state before returning */
-    if (chassisOn)
-    {
-        //Triggering mbox reset
-        rc = system(mbox_reset_cmd.c_str());
-        if (rc != 0)
-        {
-           rc = -errno;
-           return rc;
-        }
-    }
-    else
+    if (!chassisOn)
     {
         return out.error(-1, FUNCNAME, "Chassis on failed\n");
     }
